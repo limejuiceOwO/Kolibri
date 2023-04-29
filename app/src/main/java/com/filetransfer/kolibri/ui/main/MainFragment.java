@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.SimpleItemAnimator;
 
 import android.os.Handler;
 import android.os.IBinder;
@@ -50,6 +51,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -209,7 +211,7 @@ public class MainFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         mBinding = FragmentMainBinding.inflate(inflater, container, false);
@@ -282,6 +284,7 @@ public class MainFragment extends Fragment {
             }
         });
 
+        ((SimpleItemAnimator) Objects.requireNonNull(mBinding.rvMainMsg.getItemAnimator())).setSupportsChangeAnimations(false);
         mBinding.rvMainMsg.setAdapter(mAdapter);
 
         // change toolbar title based on connected device name
@@ -322,17 +325,13 @@ public class MainFragment extends Fragment {
             mNetService.disconnect();
         });
 
-        mBinding.btnSendFile.setOnClickListener((v) -> {
-            mDocPicker.launch(new String[]{ "*/*" });
-        });
+        mBinding.btnSendFile.setOnClickListener((v) -> mDocPicker.launch(new String[]{ "*/*" }));
 
-        mBinding.btnSendApp.setOnClickListener((v) -> {
-            getParentFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.container, new SendAppFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
+        mBinding.btnSendApp.setOnClickListener((v) -> getParentFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, new SendAppFragment())
+                .addToBackStack(null)
+                .commit());
 
         mBinding.btnSendText.setOnClickListener((v) -> {
             if (mNetService == null) {
