@@ -1,0 +1,16 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="General">
+
+        <EditTextPreference
+            app:key="device_name"
+            app:title="Device Name"
+            app:useSimpleSummaryProvider="true" />
+
+<!--        <Preference-->
+<!--            app:key="clear_message"-->
+<!--            app:title="Clear all messages"/>-->
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
