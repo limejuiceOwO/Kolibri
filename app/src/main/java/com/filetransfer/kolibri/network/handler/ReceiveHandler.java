@@ -4,10 +4,7 @@ import static com.filetransfer.kolibri.misc.Util.closeSilently;
 
 import android.util.Log;
 
-import com.filetransfer.kolibri.db.dao.FileDao;
-import com.filetransfer.kolibri.db.entity.FileEntry;
 import com.filetransfer.kolibri.network.FileTaskWrapper;
-import com.filetransfer.kolibri.network.ITransferCallback;
 import com.filetransfer.kolibri.network.NetProtocol;
 
 import java.io.File;
@@ -29,7 +26,6 @@ public class ReceiveHandler implements ITransferHandler {
     private File mFile;
     private final ByteBuffer mBuf = ByteBuffer.allocate(NetProtocol.FILE_BLK_SIZE);
     private int mState = 0;
-    private boolean isRunning = true;
 
     public ReceiveHandler(
             FileTaskWrapper task,
@@ -94,13 +90,7 @@ public class ReceiveHandler implements ITransferHandler {
                     long fileSize = mBuf.getLong();
 //                    Log.e(TAG, "fileSize=" + fileSize);
                     mState = 3;
-
-                    synchronized (this) {
-                        if (!isRunning) { // ensure that critical resources must be closed if created
-                            return false;
-                        }
-                        mFileStream = new FileOutputStream(mFile);
-                    }
+                    mFileStream = new FileOutputStream(mFile);
 
                     mTask.start(mFile.getName(), mBaseDir.getAbsolutePath(), fileSize, false);
                     mBuf.limit((int) Math.min(NetProtocol.FILE_BLK_SIZE, mTask.remaining()));
@@ -132,13 +122,8 @@ public class ReceiveHandler implements ITransferHandler {
         Log.i(TAG, "terminated=" + completed);
         closeSilently(mChannel);
         mTask.finish(completed);
-        synchronized (this) {
-            if (isRunning) {
-                isRunning = false;
-                if (mFileStream != null) {
-                    closeSilently(mFileStream);
-                }
-            }
+        if (mFileStream != null) {
+            closeSilently(mFileStream);
         }
     }
 

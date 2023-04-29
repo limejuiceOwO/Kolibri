@@ -2,9 +2,6 @@ package com.filetransfer.kolibri.network;
 
 import static com.filetransfer.kolibri.misc.Util.closeSilently;
 
-import android.os.Handler;
-import android.os.Looper;
-import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import com.filetransfer.kolibri.db.dao.FileDao;
@@ -24,18 +21,23 @@ import java.nio.channels.SocketChannel;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 class TransferController {
 
     class MultiplexTask implements Runnable {
+
+        final int mMyEpoch;
+
+        MultiplexTask(int epoch) {
+            mMyEpoch = epoch;
+        }
 
         @Override
         public void run() {
             try (ServerSocketChannel srv = ServerSocketChannel.open()) {
 
                 synchronized (MultiplexTask.this) {
-                    if (!isRunning) {
+                    if (mMyEpoch != mEpoch) {
                         return;
                     }
                     srv.bind(new InetSocketAddress(NetProtocol.FILE_PORT));
@@ -49,7 +51,7 @@ class TransferController {
                     mSelector.select();
 
                     synchronized (MultiplexTask.this) {
-                        if (!isRunning) {
+                        if (mMyEpoch != mEpoch) {
                             return;
                         }
 
@@ -78,7 +80,7 @@ class TransferController {
                                     mBaseDir);
 
                             synchronized (MultiplexTask.this) {
-                                if (!isRunning) {
+                                if (mMyEpoch != mEpoch) {
                                     handler.abort();
                                     return;
                                 }
@@ -96,8 +98,14 @@ class TransferController {
                             }
                         } else if (key.isReadable() || key.isWritable() || key.isConnectable()) {
                             ITransferHandler handler = (ITransferHandler) key.attachment();
-                            if (!handler.onSelected(key)) {
-                                mHandlers.remove(handler);
+                            synchronized (MultiplexTask.this) {
+                                if (mMyEpoch != mEpoch) {
+                                    return;
+                                }
+
+                                if (!handler.onSelected(key)) {
+                                    mHandlers.remove(handler);
+                                }
                             }
                         }
                     }
@@ -123,6 +131,7 @@ class TransferController {
     private Thread mMultiplexThread;
     private ServerSocketChannel mServerChannel;
     private String mPairName;
+    private int mEpoch = 0;
 
     public TransferController(File baseDir, FileDao dao, ITransferCallback callback) {
         try {
@@ -145,7 +154,7 @@ class TransferController {
             isRunning = true;
             mPairName = pairName;
             mPairAddr = pairAddr;
-            mMultiplexThread = new Thread(new MultiplexTask());
+            mMultiplexThread = new Thread(new MultiplexTask(mEpoch));
             mMultiplexThread.start();
         }
     }
@@ -157,6 +166,7 @@ class TransferController {
             }
 
             isRunning = false;
+            mEpoch += 1;
             mMultiplexThread.interrupt();
 
             if (mServerChannel != null) {
