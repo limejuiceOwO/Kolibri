@@ -17,10 +17,6 @@ import com.filetransfer.kolibri.misc.Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.ListIterator;
 
 public class MainMsgListAdapter extends RecyclerView.Adapter<MainMsgListAdapter.BaseVH<? extends BaseEntry>> {
 
@@ -33,7 +29,6 @@ public class MainMsgListAdapter extends RecyclerView.Adapter<MainMsgListAdapter.
 
     public MainMsgListAdapter(Callback callback) {
         mCallback = callback;
-        setHasStableIds(true);
     }
 
     public void mergeEntriesIntoDataSet(FileEntry[] fileEntries, ChatEntry[] chatEntries) {
@@ -103,11 +98,6 @@ public class MainMsgListAdapter extends RecyclerView.Adapter<MainMsgListAdapter.
     @Override
     public int getItemCount() {
         return mDataSet.size();
-    }
-
-    @Override
-    public long getItemId(int position) {
-        return mDataSet.get(position).id;
     }
 
     public static abstract class BaseVH<T extends BaseEntry> extends RecyclerView.ViewHolder {
