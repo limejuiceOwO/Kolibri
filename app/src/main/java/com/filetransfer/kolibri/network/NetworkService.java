@@ -1,5 +1,8 @@
 package com.filetransfer.kolibri.network;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -8,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pInfo;
@@ -27,8 +31,10 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
+import com.filetransfer.kolibri.R;
 import com.filetransfer.kolibri.db.MainDatabase;
 import com.filetransfer.kolibri.misc.Util;
 
@@ -41,9 +47,9 @@ import java.lang.reflect.Method;
 public class NetworkService extends Service {
 
     public static final String PREF_DEVICE_NAME = "device_name";
-    public static final String ACTIVITY_CALLBACK = "callback";
     public static final int EVENT_STATE_CHANGED = 0;
     public static final int EVENT_NEW_ENTRY = 1;
+    public static final int NOTICE_ID = 100;
 
     public enum State {
         NOT_CONNECTED,
@@ -172,43 +178,44 @@ public class NetworkService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        if (mActivityCb != null) {
-            throw new RuntimeException("duplicated service bind");
-        }
-        Log.i(TAG, "activity bound");
-        handleBind(intent);
         return new LocalBinder();
     }
 
     @Override
-    public void onRebind(Intent intent) {
-        super.onRebind(intent);
-        Log.i(TAG, "activity rebound");
-        handleBind(intent);
-    }
-
-    private void handleBind(Intent intent) {
-        mActivityCb = intent.getParcelableExtra(ACTIVITY_CALLBACK);
-        sendStateChangedEvent();
-        if (mState == State.NOT_CONNECTED) {
-            mManager.discoverPeers(mChannel, null);
-        }
-    }
-
-    @Override
     public boolean onUnbind(Intent intent) {
-        Log.i(TAG, "activity unbound");
-        if (mState == State.NOT_CONNECTED) {
-            mManager.stopPeerDiscovery(mChannel, null);
-        }
-        mActivityCb = null;
-        return true;
+        unregisterActivityCallback();
+        return false;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            String NOTIFICATION_CHANNEL_ID = "com.filetransfer.kolibri";
+            String channelName = "Kolibri";
+
+            NotificationChannel chan =new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);;
+            chan.setLightColor(Color.BLUE);
+            chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            assert manager != null;
+            manager.createNotificationChannel(chan);
+
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
+            Notification notification = notificationBuilder.setOngoing(true)
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setContentTitle("Kolibri")
+                    .setContentText("NetworkService is running")
+                    .setPriority(NotificationManager.IMPORTANCE_MIN)
+                    .setCategory(Notification.CATEGORY_SERVICE)
+                    .build();
+
+            startForeground(1, notification);
+        } else {
+            startForeground(1, new Notification());
+        }
+
         return START_NOT_STICKY;
-//        return START_STICKY;
     }
 
     @Override
@@ -219,6 +226,31 @@ public class NetworkService extends Service {
         unregisterReceiver(mP2pReceiver);
         mCmdController.disconnect();
         mChannel.close();
+    }
+
+    public void registerActivityCallback(Messenger cb) {
+        if (mActivityCb != null) {
+            return;
+        }
+
+        Log.i(TAG, "activity callback registered");
+        mActivityCb = cb;
+        sendStateChangedEvent();
+        if (mState == State.NOT_CONNECTED) {
+            mManager.discoverPeers(mChannel, null);
+        }
+    }
+
+    public void unregisterActivityCallback() {
+        if (mActivityCb == null) {
+            return;
+        }
+
+        Log.i(TAG, "activity callback unregistered");
+        if (mState == State.NOT_CONNECTED) {
+            mManager.stopPeerDiscovery(mChannel, null);
+        }
+        mActivityCb = null;
     }
 
     public void connect(String pairMac) {

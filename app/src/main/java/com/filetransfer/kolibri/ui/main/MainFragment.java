@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -49,10 +50,8 @@ import com.filetransfer.kolibri.ui.setting.SettingsFragment;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 // TODO: support udp broadcast
@@ -115,7 +114,6 @@ public class MainFragment extends Fragment {
             });
 
     public static class Model extends ViewModel {
-        final MutableLiveData<NetworkService.State> state = new MutableLiveData<>();
         final MutableLiveData<String> devName = new MutableLiveData<>(null);
     }
 
@@ -124,6 +122,10 @@ public class MainFragment extends Fragment {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.i(TAG, "service bound");
             mNetService = ((NetworkService.LocalBinder) service).getService();
+            mNetService.registerActivityCallback(new Messenger(mServiceMsgHandler));
+
+            // update message list
+            addNewEntries();
         }
 
         @Override
@@ -133,16 +135,14 @@ public class MainFragment extends Fragment {
         }
     };
 
-    private final Handler mServiceMsgHandler = new Handler(msg -> {
+    private final Handler mServiceMsgHandler = new Handler(Looper.getMainLooper(), msg -> {
         switch (msg.what) {
             case NetworkService.EVENT_STATE_CHANGED:
                 Log.i(TAG, "service state changed to " + msg.obj);
-                mModel.state.setValue((NetworkService.State) msg.obj);
+                onServiceStateChanged((NetworkService.State) msg.obj);
                 break;
             case NetworkService.EVENT_NEW_ENTRY:
                 addNewEntries();
-                mMsgListUpdateHandler.removeCallbacks(mMsgListUpdateTask);
-                mMsgListUpdateHandler.postDelayed(mMsgListUpdateTask, FILE_ENTRY_UPDATE_DELAY);
                 break;
         }
         return true;
@@ -203,11 +203,14 @@ public class MainFragment extends Fragment {
         });
 
         // start NetworkService
-        mActivity.startService(new Intent(mActivity, NetworkService.class));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mActivity.startForegroundService(new Intent(mActivity, NetworkService.class));
+        } else {
+            mActivity.startService(new Intent(mActivity, NetworkService.class));
+        }
+
         // bind to NetworkService
-        Intent bindIntent = new Intent(mActivity, NetworkService.class);
-        bindIntent.putExtra(NetworkService.ACTIVITY_CALLBACK, new Messenger(mServiceMsgHandler));
-        mActivity.bindService(bindIntent, mConn, 0);
+        mActivity.bindService(new Intent(mActivity, NetworkService.class), mConn, 0);
     }
 
     @Override
@@ -232,40 +235,6 @@ public class MainFragment extends Fragment {
                 return true;
             }
             return false;
-        });
-
-        // switch ui and discovery state
-        mModel.state.observe(getViewLifecycleOwner(), (state) -> {
-            int[] visibility = {View.GONE, View.GONE, View.GONE};
-            switch (state) {
-                case CONNECTED:
-                    mBinding.toolbar.setSubtitle("Connected");
-                    if (mNetService != null) {
-                        mModel.devName.setValue(mNetService.getPairName());
-                    }
-                    mBinding.chatTextInput.setText("");
-                    visibility[2] = View.VISIBLE;
-                    break;
-                case NOT_CONNECTED:
-                    mBinding.toolbar.setSubtitle("Not Connected");
-                    mModel.devName.setValue(null);
-                    visibility[0] = View.VISIBLE;
-                    break;
-                case SRV_CONNECTING:
-                case P2P_CONNECTING:
-                    mBinding.toolbar.setSubtitle("Connecting to pair device");
-                    visibility[1] = View.VISIBLE;
-                    break;
-                case P2P_GROUP_CREATING:
-                case P2P_GROUP_CREATED:
-                    mBinding.toolbar.setSubtitle("Waiting for the pair device to connect");
-                    visibility[1] = View.VISIBLE;
-                    break;
-            }
-
-            mBinding.cmdGroupNotConnected.setVisibility(visibility[0]);
-            mBinding.cmdGroupConnecting.setVisibility(visibility[1]);
-            mBinding.cmdGroupConnected.setVisibility(visibility[2]);
         });
 
         // init main message list
@@ -297,9 +266,6 @@ public class MainFragment extends Fragment {
         });
 
         mBinding.btnConnect.setOnClickListener((v) -> {
-            if (mModel.state.getValue() != NetworkService.State.NOT_CONNECTED) {
-                return;
-            }
             PairDialog dlg = new PairDialog();
             dlg.show(getChildFragmentManager(), PairDialog.class.getSimpleName());
         });
@@ -379,9 +345,11 @@ public class MainFragment extends Fragment {
         filter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
         mActivity.registerReceiver(mReceiver, filter);
 
-        // update message list
-        addNewEntries();
-        mMsgListUpdateTask.run();
+        // register activity callback at NetworkService
+        if (mNetService != null) {
+            mNetService.registerActivityCallback(new Messenger(mServiceMsgHandler));
+            addNewEntries();
+        }
     }
 
     @Override
@@ -391,13 +359,51 @@ public class MainFragment extends Fragment {
         // stop message list update
         mActivity.unregisterReceiver(mReceiver);
         mMsgListUpdateHandler.removeCallbacks(mMsgListUpdateTask);
+
+        // unregister activity callback at NetworkService
+        if (mNetService != null) {
+            mNetService.unregisterActivityCallback();
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mActivity.unbindService(mConn);
         mNetService = null;
+        mActivity.unbindService(mConn);
+    }
+
+    private void onServiceStateChanged(NetworkService.State state) {
+        int[] visibility = {View.GONE, View.GONE, View.GONE};
+        switch (state) {
+            case CONNECTED:
+                mBinding.toolbar.setSubtitle("Connected");
+                if (mNetService != null) {
+                    mModel.devName.setValue(mNetService.getPairName());
+                }
+                mBinding.chatTextInput.setText("");
+                visibility[2] = View.VISIBLE;
+                break;
+            case NOT_CONNECTED:
+                mBinding.toolbar.setSubtitle("Not Connected");
+                mModel.devName.setValue(null);
+                visibility[0] = View.VISIBLE;
+                break;
+            case SRV_CONNECTING:
+            case P2P_CONNECTING:
+                mBinding.toolbar.setSubtitle("Connecting to pair device");
+                visibility[1] = View.VISIBLE;
+                break;
+            case P2P_GROUP_CREATING:
+            case P2P_GROUP_CREATED:
+                mBinding.toolbar.setSubtitle("Waiting for the pair device to connect");
+                visibility[1] = View.VISIBLE;
+                break;
+        }
+
+        mBinding.cmdGroupNotConnected.setVisibility(visibility[0]);
+        mBinding.cmdGroupConnecting.setVisibility(visibility[1]);
+        mBinding.cmdGroupConnected.setVisibility(visibility[2]);
     }
 
     private void addNewEntries() {
@@ -412,15 +418,15 @@ public class MainFragment extends Fragment {
 
         mAdapter.mergeEntriesIntoDataSet(fileEntries, chatEntries);
 
-//        int size = mAdapter.getItemCount();
-//        if (size > 0) {
-//            mBinding.mainMsgList.scrollToPosition(size - 1);
-//        }
-
         for (FileEntry e : fileEntries) {
             if (e.status == FileEntry.STATUS_RUNNING) {
                 mRunningFileTaskIds.add(e.id);
             }
+        }
+
+        if (mRunningFileTaskIds.size() > 0) {
+            mMsgListUpdateHandler.removeCallbacks(mMsgListUpdateTask);
+            mMsgListUpdateHandler.postDelayed(mMsgListUpdateTask, FILE_ENTRY_UPDATE_DELAY);
         }
     }
 
