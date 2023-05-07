@@ -11,26 +11,29 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
+        android:background="@color/white"
         android:minHeight="?attr/actionBarSize"
         android:theme="?attr/actionBarTheme"
-        app:title="@string/app_name"
-        app:subtitle="Not Connected"
         app:menu="@menu/main"
-        app:titleTextColor="@color/white"
-        app:subtitleTextColor="@color/white"/>
-<!--    Chat List -->
+        app:subtitle="Not Connected"
+        app:subtitleTextColor="#333333"
+        app:title="@string/app_name"
+        app:titleTextColor="#333333" />
+    <!--    Chat List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_main_msg"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-    </androidx.recyclerview.widget.RecyclerView>
-<!--       Command panel  -->
+        android:layout_weight="1"
+        android:background="#F2F2F2"
+        ></androidx.recyclerview.widget.RecyclerView>
+<!--    tools:listitem="@layout/item_chat_pair"-->
+
+    <!--       Command panel  -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/teal_200">
+        android:background="#ffffff">
         <!--            Not Connected Commands-->
         <LinearLayout
             android:id="@+id/cmd_group_not_connected"
@@ -79,13 +82,14 @@
             android:id="@+id/cmd_group_connected"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#ffffff"
             android:orientation="vertical"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:visibility="visible">
             <!-- Chat Box -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="#ffffff"
                 android:orientation="horizontal"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp">
@@ -94,25 +98,29 @@
                     android:id="@+id/chat_text_input"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:inputType="textMultiLine"
-                    android:background="@drawable/bg_chat_text_input"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_chat_text_input"
+                    android:inputType="textMultiLine"
+                    android:text="Enter message"
+                    android:textColor="#999999"
                     android:padding="8dp" />
 
                 <Button
                     android:id="@+id/btn_send_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
                     android:layout_marginStart="16dp"
-                    android:text="Send"
-                    android:layout_gravity="bottom"/>
+                    android:backgroundTint="#1781B5"
+                    android:text="Send" />
             </LinearLayout>
             <!-- Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
+                android:background="#ffffff"
                 android:orientation="horizontal">
 
                 <Space

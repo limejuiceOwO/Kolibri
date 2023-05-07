@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Pair With a Device"
+        android:textColor="@color/black"
         android:gravity="center"
         android:textSize="20sp"
         android:paddingTop="16dp"
@@ -18,6 +19,8 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_device_list"
         android:layout_height="match_parent"
-        android:layout_width="match_parent"/>
+        android:layout_width="match_parent"
+        android:background="#f2f2f2"/>
+        <!--tools:listitem="@layout/item_device"-->
 
 </LinearLayout>

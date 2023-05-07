@@ -9,14 +9,16 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
+        android:background="#ffffff"
         android:minHeight="?attr/actionBarSize"
         android:theme="?attr/actionBarTheme"
         app:navigationIcon="@drawable/baseline_arrow_back_24"
-        app:title="Choose an app to send"
-        app:titleTextColor="@color/white" />
+        app:subtitle="choose the app you want to send"
+        app:title="Choose App"
+        app:titleTextColor="#333333" />
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_send_app"
+        android:background="#f2f2f2"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>

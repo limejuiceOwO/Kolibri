@@ -15,8 +15,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textSize="11sp"
-            android:layout_marginBottom="8dp"
+            android:textSize="15sp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginRight="3dp"
             android:layout_gravity="end"
             android:text="AAA"/>
         <LinearLayout
@@ -42,6 +43,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
+                    android:textSize="16sp"
                     android:text="S.txt" />
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -51,6 +53,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="12sp"
+                        android:textColor="@color/black"
                         android:text="114KB / 514KB" />
                     <Space
                         android:layout_width="0dp"
@@ -62,6 +65,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="12sp"
+                        android:textColor="@color/black"
                         android:text="Sending" />
                 </LinearLayout>
             </LinearLayout>
