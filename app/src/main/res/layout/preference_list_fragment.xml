@@ -9,14 +9,15 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
+        android:background="#ffffff"
         android:minHeight="?attr/actionBarSize"
         android:theme="?attr/actionBarTheme"
         app:navigationIcon="@drawable/baseline_arrow_back_24"
         app:title="Settings"
-        app:titleTextColor="@color/white" />
+        app:titleTextColor="@color/black" />
 
     <FrameLayout
+        android:background="#f2f2f2"
         android:id="@android:id/list_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
